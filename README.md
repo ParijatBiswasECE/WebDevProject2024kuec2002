@@ -39,6 +39,6 @@ Users must **register first**, and then log in using the credentials they create
 
 ## 🚀 Deployment Link (Mandatory)  
 Live Project Link:  
-https://your-deployed-project-link.com
+[https://your-deployed-project-link.com](https://parijatbiswasece.github.io/WebDevProject2024kuec2002)
 
 ---
