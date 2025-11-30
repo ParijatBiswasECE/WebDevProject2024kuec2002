@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Register — Demo (IndexedDB)</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="box">
+    <div class="img-layer"></div> <!-- keeps your image layering effect -->
+    <div class="glass" style="max-width:520px;margin:auto;">
+      <h2 class="title">Create Account</h2>
+
+      <div id="flash" style="margin-bottom:12px"></div>
+
+      <form id="registerForm" autocomplete="off" onsubmit="return false;">
+        <label>Full Name</label>
+        <input id="fullname" type="text" required>
+
+        <label>Email</label>
+        <input id="email" type="email">
+
+        <label>Username</label>
+        <input id="username" type="text" required>
+
+        <label>Password</label>
+        <input id="password" type="password" required>
+
+        <label>Confirm Password</label>
+        <input id="confirm" type="password" required>
+
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <button id="registerBtn" class="btn" type="button">Register</button>
+          <a href="login.html" class="btn secondary" style="display:inline-flex;align-items:center;">Go to Login</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+<script>
+/* IndexedDB + PBKDF2 registration (keeps visuals intact)
+ - DB 'demo_auth_db', store 'users', keyPath 'username'
+ - per-user random 16-byte salt stored as hex
+ - PBKDF2 params: 120000 iterations, SHA-256, derived 256-bit key
+*/
+
+const $ = id => document.getElementById(id);
+const flash = $('flash');
+
+function openDB(){
+  return new Promise((res, rej) => {
+    const req = indexedDB.open('demo_auth_db', 1);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if(!db.objectStoreNames.contains('users')){
+        const store = db.createObjectStore('users', { keyPath: 'username' });
+        store.createIndex('by_email', 'email', { unique: true });
+      }
+    };
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+}
+
+function getUser(username){
+  return openDB().then(db => new Promise((res, rej) => {
+    const tx = db.transaction('users','readonly'), store = tx.objectStore('users');
+    const r = store.get(username);
+    r.onsuccess = ()=> res(r.result || null);
+    r.onerror = ()=> rej(r.error);
+  }));
+}
+
+function addUser(user){
+  return openDB().then(db => new Promise((res, rej) => {
+    const tx = db.transaction('users','readwrite'), store = tx.objectStore('users');
+    const r = store.add(user);
+    r.onsuccess = ()=> res(true);
+    r.onerror = ()=> rej(r.error);
+  }));
+}
+
+function toHex(buffer){
+  return Array.from(new Uint8Array(buffer)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function fromHex(hex){
+  const bytes = new Uint8Array(hex.length/2);
+  for(let i=0;i<bytes.length;i++) bytes[i] = parseInt(hex.substr(i*2,2),16);
+  return bytes.buffer;
+}
+
+async function deriveKeyHex(password, saltHex, iterations=120000, keyLen=32){
+  const pwUtf8 = new TextEncoder().encode(password);
+  const salt = new Uint8Array(fromHex(saltHex));
+  const baseKey = await crypto.subtle.importKey('raw', pwUtf8, 'PBKDF2', false, ['deriveBits']);
+  const derived = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+    baseKey,
+    keyLen * 8
+  );
+  return toHex(derived);
+}
+
+function randomSaltHex(len=16){
+  const arr = new Uint8Array(len);
+  crypto.getRandomValues(arr);
+  return toHex(arr.buffer);
+}
+
+function showFlash(msg, type='danger'){
+  flash.innerHTML = `<div class="flash ${type}">${msg}</div>`;
+  setTimeout(()=> { if(flash) flash.innerHTML=''; }, 6000);
+}
+
+$('registerBtn').addEventListener('click', async ()=>{
+  const fullname = $('fullname').value.trim();
+  const email = $('email').value.trim().toLowerCase();
+  const username = $('username').value.trim().toLowerCase();
+  const password = $('password').value;
+  const confirm = $('confirm').value;
+
+  if(!fullname){ showFlash('Full name required','danger'); return; }
+  if(!username || username.length < 3){ showFlash('Username must be >= 3 chars','danger'); return; }
+  if(!password || password.length < 6){ showFlash('Password must be >= 6 chars','danger'); return; }
+  if(password !== confirm){ showFlash('Passwords do not match','danger'); return; }
+
+  try {
+    const exists = await getUser(username);
+    if(exists){ showFlash('Username already taken','danger'); return; }
+    if(email){
+      const db = await openDB();
+      const tx = db.transaction('users','readonly'), store = tx.objectStore('users');
+      const idx = store.index('by_email');
+      const q = idx.get(email);
+      const p = await new Promise((r,rej)=>{ q.onsuccess=()=>r(q.result); q.onerror=()=>rej(q.error); });
+      if(p){ showFlash('Email already registered','danger'); return; }
+    }
+
+    const salt = randomSaltHex(16);
+    const derived = await deriveKeyHex(password, salt, 120000, 32);
+
+    const user = {
+      username,
+      fullname,
+      email: email || null,
+      salt,
+      hash: derived,
+      createdAt: new Date().toISOString()
+    };
+
+    await addUser(user);
+    showFlash('Registration successful — redirecting to login...','success');
+    setTimeout(()=> location.href = 'login.html', 900);
+  } catch(err){
+    console.error(err);
+    showFlash('Unexpected error storing user. Check console.','danger');
+  }
+});
+</script>
+</body>
+</html>

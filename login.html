@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Login — Demo (IndexedDB)</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="box">
+    <div class="img-layer"></div>
+    <div class="glass" style="margin:auto;">
+      <h2 class="title">Login</h2>
+
+      <div id="flash" style="margin-bottom:12px"></div>
+
+      <form id="loginForm" autocomplete="off" onsubmit="return false;">
+        <label>Username</label>
+        <input id="username" type="text" required>
+
+        <label>Password</label>
+        <input id="password" type="password" required>
+
+
+        <a href="register.html" class="btn secondary" style="display:inline-flex;align-items:center;">Don't have account yet Register Here</a>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <button id="loginBtn" class="btn" type="button">Login</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+<script>
+const $ = id => document.getElementById(id);
+const flash = $('flash');
+
+function openDB(){ return new Promise((res,rej)=>{ const r=indexedDB.open('demo_auth_db',1); r.onupgradeneeded=(e)=>{ const db=e.target.result; if(!db.objectStoreNames.contains('users')){ const s=db.createObjectStore('users',{keyPath:'username'}); s.createIndex('by_email','email',{unique:true}); } }; r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+function getUser(username){ return openDB().then(db=>new Promise((res,rej)=>{ const tx=db.transaction('users','readonly'), store=tx.objectStore('users'); const rq=store.get(username); rq.onsuccess=()=>res(rq.result||null); rq.onerror=()=>rej(rq.error); })); }
+
+function toHex(buffer){ return Array.from(new Uint8Array(buffer)).map(b=>b.toString(16).padStart(2,'0')).join(''); }
+function fromHex(hex){ const bytes=new Uint8Array(hex.length/2); for(let i=0;i<bytes.length;i++) bytes[i]=parseInt(hex.substr(i*2,2),16); return bytes.buffer; }
+async function deriveKeyHex(password, saltHex, iterations=120000, keyLen=32){
+  const pwUtf8 = new TextEncoder().encode(password);
+  const salt = new Uint8Array(fromHex(saltHex));
+  const baseKey = await crypto.subtle.importKey('raw', pwUtf8, 'PBKDF2', false, ['deriveBits']);
+  const derived = await crypto.subtle.deriveBits({ name:'PBKDF2', salt, iterations, hash: 'SHA-256' }, baseKey, keyLen*8);
+  return toHex(derived);
+}
+
+function showFlash(msg, type='danger'){ flash.innerHTML=`<div class="flash ${type}">${msg}</div>`; setTimeout(()=>{ if(flash) flash.innerHTML=''; },5000); }
+
+$('loginBtn').addEventListener('click', async ()=>{
+  const username = $('username').value.trim().toLowerCase();
+  const password = $('password').value;
+  if(!username || !password){ showFlash('Enter username and password','danger'); return; }
+
+  try {
+    const user = await getUser(username);
+    if(!user){ showFlash('Invalid username or password','danger'); return; }
+    const derived = await deriveKeyHex(password, user.salt, 120000, 32);
+    if(derived !== user.hash){ showFlash('Invalid username or password','danger'); return; }
+
+    const sessionUser = { username: user.username, fullname: user.fullname };
+    sessionStorage.setItem('demo_auth', JSON.stringify(sessionUser));
+    showFlash('Login successful — redirecting...', 'success');
+
+    setTimeout(()=> {
+      const params = new URLSearchParams(window.location.search);
+      const next = params.get('next') || 'product.html';
+      window.location.href = next;
+    }, 700);
+  } catch(err){
+    console.error(err);
+    showFlash('Login error — check console', 'danger');
+  }
+});
+
+(function(){ try{ const s = sessionStorage.getItem('demo_auth'); if(s) location.href = 'product.html'; }catch(e){} })();
+</script>
+</body>
+</html>

@@ -1,0 +1,166 @@
+/* Page */
+body{
+    margin: 0;
+    padding: 0;
+    background: #0e2136 url('image.png') no-repeat center center fixed;
+    background-size: cover;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: system-ui, sans-serif;
+    color: #fff;
+    padding: 20px;                 /* keeps card away from screen edges */
+    box-sizing: border-box;
+}
+
+/* ---------- BOX CONTAINER ---------- */
+.box{
+    width: 100%;                   /* responsive width */
+    max-width: 480px;              /* original width as a cap */
+    min-height: 340px;
+    position: relative;
+    border-radius: 25px;
+}
+
+/* ---------- IMAGE LAYER (INSIDE BORDER) ---------- */
+.img-layer{
+    position: absolute;
+    inset: 0;
+    background: url("image.png") center/cover no-repeat;
+    border-radius: inherit;
+    z-index: -1;   /* sits above gradient but below glass */
+}
+
+/* ---------- GLASS LOGIN BOX ---------- */
+.glass{
+    position: relative;
+    z-index: 1;
+
+    background: rgba(10, 20, 40, 0.30);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+
+    border-radius: inherit;
+    padding: 35px 40px;
+    box-sizing: border-box;
+    border: 1px solid rgba(255,255,255,0.18);
+}
+
+/* Title */
+.title{
+    font-size: 1.6rem;
+    margin-bottom: 20px;
+    font-weight: 700;
+}
+
+/* ---------- FORM ---------- */
+form{
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+input{
+    width: 100%;                   /* make inputs fill the container */
+    padding: 12px;
+    border-radius: 12px;
+    border: none;
+    background: rgba(255,255,255,0.85);
+    outline: none;
+    box-sizing: border-box;
+}
+
+button{
+    margin-top: 14px;
+    padding: 12px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    font-size: 1rem;
+
+    background: linear-gradient(90deg, #00c3ff, #5f4b8b);
+    color: #0f0f0f;
+
+    position: relative;
+    overflow: hidden;
+
+    transition: 
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        filter 0.2s ease;
+}
+
+/* GLOW ON HOVER */
+button:hover{
+    transform: translateY(-2px);
+    filter: brightness(1.1);
+
+    box-shadow:
+        0 0 10px rgba(0, 195, 255, 0.8),
+        0 0 20px rgba(95, 75, 139, 0.7),
+        0 0 35px rgba(168, 85, 247, 0.6);
+}
+
+/* CLICK PRESS EFFECT */
+button:active{
+    transform: translateY(0);
+    box-shadow:
+        0 0 6px rgba(0, 195, 255, 0.6),
+        0 0 14px rgba(95, 75, 139, 0.5);
+}
+
+/* ---------- GRADIENT BORDER EFFECT ---------- */
+@property --deg{
+    syntax: "<angle>";
+    inherits: true;
+    initial-value: 0deg;
+}
+
+/* outer conic gradient border */
+.box::before,
+.box::after{
+    content:"";
+    position:absolute;
+    
+    /* expands border around both image + glass */
+    inset: -3px; 
+    background: conic-gradient(
+        from var(--deg),
+        #a855f7,
+        #15739b,
+        #00c3ff,
+        #15739b,
+        #a855f7
+    );
+    border-radius: inherit;
+    animation: autoRotate 3s linear infinite;
+    z-index: -2;
+}
+
+/* glow effect */
+.box::after{
+    filter: blur(22px);
+}
+
+@keyframes autoRotate{
+    to { --deg: 360deg; }
+}
+
+/* ---------- RESPONSIVE TWEAKS ---------- */
+@media (max-width: 480px){
+    .glass{
+        padding: 24px 20px;        /* tighter padding on small screens */
+    }
+
+    .title{
+        font-size: 1.4rem;
+    }
+}
+
+/* Link color */
+a {
+    color: white;
+}

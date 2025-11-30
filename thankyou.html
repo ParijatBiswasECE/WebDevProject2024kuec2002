@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Thank you — Order Confirmed</title>
+
+<style>
+  :root{
+    --bg:#0e2136;
+    --card-bg:#142d4a;
+    --glass-bg: rgba(10,20,36,0.30);
+    --neon1:#00c3ff;
+    --neon2:#634bac;
+    --muted:#cfd6df;
+    --radius:18px;
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    color:#fff;
+    background: var(--bg) url('image.png') center/cover fixed;
+    padding:28px;
+  }
+
+  /* --- CLEAN WRAPPER (NO GRADIENT BORDER) --- */
+  .box{
+    width:100%;
+    max-width:1100px;
+    padding:22px;
+    border-radius:var(--radius);
+  }
+
+  /* --- GLASS INNER CARD --- */
+  .glass{
+    background: rgba(20, 37, 74, 0.40);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    border-radius: inherit;
+    padding: 26px;
+    border: 1px solid rgba(255,255,255,0.06);
+    box-shadow: 0 22px 60px rgba(0,0,0,0.55);
+  }
+
+  .content{
+    display:grid;
+    grid-template-columns:1fr 420px;
+    gap:20px;
+  }
+  @media(max-width:980px){
+    .content{ grid-template-columns:1fr; }
+  }
+
+  h1{ margin:0 0 6px 0; font-size:1.55rem; }
+  .muted{ color:var(--muted); }
+
+  /* Receipt */
+  .receipt{
+    background: rgba(255,255,255,0.03);
+    padding:16px;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,0.05);
+    margin-top:10px;
+  }
+  .row{
+    display:flex;
+    justify-content:space-between;
+    padding:8px 0;
+  }
+  .total{
+    font-weight:900;
+    color:var(--neon1);
+  }
+
+  /* Buttons */
+  .buttons{
+    margin-top:14px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .btn{
+    padding:12px 16px;
+    border:none;
+    cursor:pointer;
+    border-radius:12px;
+    font-weight:700;
+    color:#04101b;
+    background:linear-gradient(90deg,var(--neon1),var(--neon2));
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .btn:hover{
+    transform:translateY(-3px);
+    box-shadow:0 12px 30px rgba(0,195,255,0.22);
+  }
+  .btn.secondary{
+    background:rgba(255,255,255,0.08);
+    color:var(--muted);
+  }
+
+  /* 3D Scene */
+  .scene-wrap{
+    width:100%;
+    height:420px;
+    border-radius:12px;
+    overflow:hidden;
+    background: rgba(255,255,255,0.03);
+    border:1px solid rgba(255,255,255,0.04);
+    position: relative;
+  }
+  @media(max-width:980px){
+    .scene-wrap{ height:320px; }
+  }
+
+  .tick-image{
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    object-fit: cover;
+  }
+
+  .success-badge{
+    padding:7px 12px;
+    border-radius:50px;
+    font-weight:800;
+    background:linear-gradient(90deg,#1fdc9a,#00c3ff);
+    color:#03131b;
+  }
+
+  .download-note{
+    margin-top:10px;
+    color:var(--muted);
+    font-size:0.9rem;
+  }
+</style>
+</head>
+<body>
+
+<div class="box">
+  <div class="glass">
+    <h1>Order Confirmed</h1>
+    <div class="muted">Thank you — your order was successfully recorded.</div>
+
+    <div class="content" style="margin-top:18px">
+
+      <!-- LEFT side (receipt) -->
+      <div>
+        <div class="receipt">
+          <div class="row"><strong>Order Status</strong> <span class="success-badge">Success</span></div>
+          <hr style="border:none;height:1px;background:rgba(255,255,255,0.05);margin:8px 0;">
+          <div class="row"><span>Order Time</span><span id="orderTime">—</span></div>
+          <div class="row"><span>Name</span><span id="orderName">—</span></div>
+          <div class="row"><span>UPI ID</span><span id="orderUpi">—</span></div>
+          <div class="row"><span>Amount</span><span id="orderAmount" class="total">—</span></div>
+          <div class="row"><span>Items</span><span id="orderItems">1</span></div>
+          <div class="download-note" id="orderNote">This is a demo confirmation.</div>
+        </div>
+
+        <div class="buttons">
+          <button id="toProducts" class="btn">Back to Products</button>
+          <button id="downloadReceipt" class="btn secondary">Download Receipt</button>
+        </div>
+      </div>
+
+      <!-- RIGHT side (3D model) -->
+      <div>
+        <div class="scene-wrap" id="sceneWrap">
+          <canvas id="threeCanvas"></canvas>
+          <img src="tick.png" alt="Success Tick" class="tick-image">
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+
+<script>
+/* same JS as before (slightly cleaned), unchanged behavior */
+const demo = (()=>{ try{return JSON.parse(sessionStorage.getItem('demo_order')||'null')}catch(e){return null}})();
+
+function formatINR(n){
+  return '₹' + Number(n).toLocaleString('en-IN');
+}
+
+document.getElementById('orderTime').textContent =
+  demo ? new Date(demo.time).toLocaleString() : new Date().toLocaleString();
+document.getElementById('orderName').textContent = demo?.name || 'Guest';
+document.getElementById('orderUpi').textContent = demo?.upi || 'demo@upi';
+document.getElementById('orderAmount').textContent = formatINR(demo?.amount || 0);
+
+document.getElementById('toProducts').onclick = ()=> location.href = 'product.html';
+
+document.getElementById('downloadReceipt').onclick = ()=>{
+  const c=document.createElement('canvas'); c.width=800; c.height=560;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle='#071523'; ctx.fillRect(0,0,800,560);
+  ctx.fillStyle='#fff'; ctx.font='22px system-ui';
+  ctx.fillText('Order Receipt',28,48);
+  ctx.font='16px system-ui';
+  ctx.fillStyle='#d4dbe4';
+  ctx.fillText('Name: ' + (demo?.name || 'Guest'), 28, 100);
+  ctx.fillText('UPI:  ' + (demo?.upi || 'demo@upi'), 28, 130);
+  ctx.fillText('Amount: ' + formatINR(demo?.amount || 0), 28, 160);
+  ctx.fillText('Time: ' + new Date(demo?.time || Date.now()).toLocaleString(), 28, 190);
+  const url=c.toDataURL(); const a=document.createElement('a');
+  a.href=url; a.download='receipt.png'; a.click();
+};
+
+/* ---------- 3D MODEL (unchanged) ---------- */
+const canvas=document.getElementById('threeCanvas');
+const scene=new THREE.Scene();
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+renderer.setPixelRatio(devicePixelRatio);
+renderer.setSize(canvas.clientWidth, canvas.clientHeight,false);
+const camera=new THREE.PerspectiveCamera(45,canvas.clientWidth/canvas.clientHeight,0.1,100);
+camera.position.set(0,0,6);
+
+function resize(){
+  const w=canvas.clientWidth, h=canvas.clientHeight;
+  renderer.setSize(w,h,false);
+  camera.aspect=w/h; camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+
+const group=new THREE.Group(); scene.add(group);
+
+const mat=new THREE.MeshStandardMaterial({
+  color:0x204060, metalness:0.6, roughness:0.15,
+  emissive:0x0a2340, emissiveIntensity:0.6
+});
+const geom=new THREE.TorusKnotGeometry(1.05,0.34,160,28);
+const mesh=new THREE.Mesh(geom,mat);
+group.add(mesh);
+
+const core=new THREE.Mesh(new THREE.SphereGeometry(0.7,32,32),
+  new THREE.MeshBasicMaterial({color:0x00c3ff,transparent:true,opacity:0.18})
+);
+group.add(core);
+
+scene.add(new THREE.AmbientLight(0xffffff,0.18));
+const d=new THREE.DirectionalLight(0xffffff,0.6); d.position.set(5,5,5); scene.add(d);
+
+const pointer={x:0,y:0}, target={x:0,y:0};
+document.getElementById('sceneWrap').addEventListener('pointermove',e=>{
+  const r=e.target.getBoundingClientRect();
+  pointer.x=(e.clientX-r.left)/r.width*2-1;
+  pointer.y=-((e.clientY-r.top)/r.height*2-1);
+  target.x=pointer.x*1.6; target.y=pointer.y*1.0;
+});
+document.getElementById('sceneWrap').addEventListener('pointerleave',()=>{
+  target.x=0; target.y=0;
+});
+
+function animate(){
+  mesh.rotation.x+=0.01; mesh.rotation.y+=0.015;
+  group.position.x+= (target.x-group.position.x)*0.06;
+  group.position.y+= (target.y-group.position.y)*0.06;
+  resize(); renderer.render(scene,camera);
+  requestAnimationFrame(animate);
+}
+animate();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Checkout — Dummy Payment</title>
+<style>
+  :root{
+    --bg:#0e2136;
+    --glass: rgba(10,20,36,0.30);
+    --neon1:#00c3ff;
+    --neon2:#634bac;
+    --muted:#cfd6df;
+    --accent: linear-gradient(90deg,var(--neon1),var(--neon2));
+    --radius:16px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    background: var(--bg) url('image.png') center/cover fixed;
+    padding:28px;
+    color:#fff;
+  }
+
+  /* Wrap WITHOUT rotating gradient */
+  .wrap{
+    width:100%;
+    max-width:960px;
+    position:relative;
+    border-radius:20px;
+    padding:28px;
+  }
+
+  /* Glass card */
+  .card{
+    position:relative;
+    border-radius:inherit;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    padding:28px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    border:1px solid rgba(255,255,255,0.06);
+    display:grid;
+    grid-template-columns: 1fr 380px;
+    gap:24px;
+  }
+
+  h1{ margin:0 0 8px 0; font-size:1.6rem }
+  p.lead{ margin:0 0 14px 0; color:var(--muted) }
+
+  /* order summary */
+  .summary{
+    background: rgba(255,255,255,0.02);
+    padding:14px;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,0.04);
+  }
+  .summary .line{ display:flex; justify-content:space-between; gap:12px; padding:8px 0; align-items:center; }
+  .summary .total{ font-weight:900; font-size:1.1rem; color:var(--neon1) }
+
+  form.row{ display:flex; flex-direction:column; gap:12px; }
+  label{ font-size:0.9rem; color:var(--muted) }
+  input[type="text"], input[type="email"], input[type="tel"], input[type="number"]{
+    padding:10px 12px; border-radius:10px; border:none; outline:none;
+    background: rgba(255,255,255,0.92); color:#071019;
+    font-size:0.95rem;
+  }
+
+  .btn{
+    padding:10px 14px; border-radius:10px; border:none; font-weight:700; cursor:pointer;
+    transition: transform .14s ease, box-shadow .14s ease;
+    background: var(--accent);
+    color:#071019;
+  }
+  .btn:hover{ transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,195,255,0.12); }
+
+  .btn.secondary{
+    background: rgba(255,255,255,0.06);
+    color:var(--muted);
+  }
+
+  .qr{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px;
+    border-radius:10px;
+    background: rgba(255,255,255,0.02);
+    border:1px dashed rgba(255,255,255,0.04);
+  }
+  .qr img{ width:160px; height:160px; object-fit:cover; border-radius:8px; }
+
+  .small{ font-size:0.9rem; padding:8px 10px; border-radius:8px; }
+
+  @media (max-width:900px){
+    .card{ grid-template-columns: 1fr; }
+  }
+
+  .notice{ padding:10px 12px; border-radius:10px; background: rgba(0,0,0,0.2); color:var(--muted); border:1px solid rgba(255,255,255,0.04); }
+
+  .actions-row{ display:flex; gap:10px; margin-top:14px; align-items:center; flex-wrap:wrap; }
+
+  .success {
+    display:inline-block;
+    padding:10px 12px;
+    border-radius:10px;
+    background: linear-gradient(90deg,#1fdc9a,#00c3ff);
+    color:#03131b;
+    font-weight:800;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="card">
+    <div>
+      <h1>Checkout (Demo)</h1>
+      <p class="lead">This is a dummy checkout. After "Pay" you'll be redirected to the confirmation page.</p>
+
+      <form id="checkoutForm" class="row" autocomplete="off" onsubmit="return false;">
+        <label>Full name</label>
+        <input id="fullname" type="text" placeholder="Your name" required>
+
+        <label>Email (optional)</label>
+        <input id="email" type="email" placeholder="name@example.com">
+
+        <label>Phone (optional)</label>
+        <input id="phone" type="tel" placeholder="+91xxxxxxxxxx">
+
+        <label>Amount (INR)</label>
+        <input id="amount" type="number" min="1" step="1" value="100" required>
+
+        <label>UPI ID (payee)</label>
+        <input id="upiId" type="text" placeholder="your-vpa@bank" required>
+
+        <div class="actions-row">
+          <button id="payBtn" type="button" class="btn">Pay (Demo)</button>
+          <button id="showQrBtn" type="button" class="btn secondary">Show QR</button>
+          <button id="backBtn" type="button" class="btn secondary">Back to Products</button>
+        </div>
+
+        <div id="status" class="foot"></div>
+      </form>
+
+      <div class="foot">
+        <p class="notice"><strong>Note:</strong> Demo mode — no real payments.</p>
+      </div>
+    </div>
+
+    <aside>
+      <div class="summary">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-weight:800">Order summary</div>
+            <div style="color:var(--muted); font-size:0.95rem">Demo payment</div>
+          </div>
+          <div class="total" id="summaryAmount">₹100</div>
+        </div>
+
+        <hr style="border:none;height:1px;background:rgba(255,255,255,0.03);margin:12px 0;">
+
+        <div class="line"><div>Items</div><div id="itemsCount">1</div></div>
+        <div class="line"><div>Shipping</div><div id="shipping">—</div></div>
+        <div class="line"><div>Total</div><div class="total" id="totalDisplay">₹100</div></div>
+      </div>
+
+      <div style="height:18px"></div>
+
+      <div id="qrWrap" class="qr" style="display:none">
+        <img id="qrImage" alt="placeholder qr">
+        <div style="flex:1">
+          <div style="font-weight:700" id="qrPayTo">Pay to: demo@upi</div>
+          <div style="color:var(--muted);font-size:0.95rem;margin-top:6px" id="qrAmount">₹0</div>
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+            <button id="copyUpi" class="small btn secondary">Copy UPI ID</button>
+            <button id="closeQr" class="small btn secondary">Close QR</button>
+          </div>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+</div>
+
+<script>
+/* JS UNCHANGED — Only visuals modified */
+
+const USD_TO_INR = 83;
+
+function formatPriceINR(priceUSD) {
+  const inr = Number(priceUSD) * USD_TO_INR;
+  const rounded = Math.round(inr / 100) * 100;
+  return '₹' + rounded.toLocaleString('en-IN');
+}
+
+const sampleProducts = [
+  {id:1, title:"Aero Running Shoe", price:69.99, category:"Footwear", subtype:"Running", tags:["men","fitness"], img:"images/aerorunning.png", createdAt:"2025-01-01"},
+  {id:2, title:"Cloud Sneaker", price:89.00, category:"Footwear", subtype:"Casual", tags:["women","street"], img:"images/cloudsneakers.png", createdAt:"2025-02-15"},
+  {id:3, title:"Studio Headphones", price:129.00, category:"Audio", subtype:"Over-Ear", tags:["wireless","music"], img:"images/studioheadphone.png", createdAt:"2025-03-12"},
+  {id:4, title:"Vivid Hoodie", price:45.50, category:"Apparel", subtype:"Hoodies", tags:["unisex","cotton"], img:"images/vividhoodie.png", createdAt:"2025-04-02"},
+  {id:5, title:"Trail Backpack", price:59.99, category:"Bags", subtype:"Outdoor", tags:["hiking","travel"], img:"images/trailbackpack.png", createdAt:"2025-04-20"},
+  {id:6, title:"Wireless Earbuds", price:99.99, category:"Audio", subtype:"In-Ear", tags:["wireless","sport"], img:"images/wirelessearbuds.png", createdAt:"2025-05-02"},
+  {id:7, title:"Performance Tee", price:19.99, category:"Apparel", subtype:"T-Shirt", tags:["fitness","men"], img:"images/performancetree.png", createdAt:"2025-05-10"},
+  {id:8, title:"Classic Wallet", price:24.00, category:"Accessories", subtype:"Wallets", tags:["leather","men"], img:"images/classicwallet.png", createdAt:"2025-05-20"},
+  {id:9, title:"Smartwatch Pro", price:199.99, category:"Wearables", subtype:"Smartwatch", tags:["fitness","wireless"], img:"images/smartwatchpro.png", createdAt:"2025-06-01"},
+  {id:10, title:"Desk Lamp RGB", price:39.99, category:"Home", subtype:"Lighting", tags:["led","decor"], img:"images/desklamprgb.png", createdAt:"2025-06-08"},
+];
+
+function calculateCartTotal() {
+  const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+  let total = 0;
+  cart.forEach(item => {
+    const product = sampleProducts.find(p => p.id === item.id);
+    if (product) {
+      total += product.price * item.qty;
+    }
+  });
+  return Math.round(total * USD_TO_INR / 100) * 100; // Round to nearest 100 INR
+}
+
+const amountEl = document.getElementById('amount');
+const upiEl = document.getElementById('upiId');
+const fullnameEl = document.getElementById('fullname');
+const emailEl = document.getElementById('email');
+const phoneEl = document.getElementById('phone');
+const payBtn = document.getElementById('payBtn');
+const showQrBtn = document.getElementById('showQrBtn');
+const qrWrap = document.getElementById('qrWrap');
+const qrImage = document.getElementById('qrImage');
+const qrPayTo = document.getElementById('qrPayTo');
+const qrAmount = document.getElementById('qrAmount');
+const status = document.getElementById('status');
+const summaryAmount = document.getElementById('summaryAmount');
+const totalDisplay = document.getElementById('totalDisplay');
+const itemsCount = document.getElementById('itemsCount');
+const copyUpi = document.getElementById('copyUpi');
+const backBtn = document.getElementById('backBtn');
+const closeQr = document.getElementById('closeQr');
+
+function formatINR(n){ return '₹' + Number(n).toLocaleString('en-IN'); }
+function updateSummary(){
+  const amt = Number(amountEl.value) || 0;
+  summaryAmount.textContent = formatINR(amt);
+  totalDisplay.textContent = formatINR(amt);
+  const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+  const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
+  itemsCount.textContent = totalItems || 1;
+  if(qrWrap.style.display !== 'none'){
+    qrAmount.textContent = formatINR(amt);
+  }
+}
+amountEl.addEventListener('input', updateSummary);
+
+// Set amount to cart total on load
+const cartTotal = calculateCartTotal();
+amountEl.value = cartTotal || 100;
+updateSummary();
+
+function placeholderQrDataUrl(text){
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'>
+    <rect width='100%' height='100%' fill='#ffffff'/>
+    <rect x='20' y='20' width='260' height='260' rx='12' fill='#0e2136'/>
+    <text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='20' fill='#ffffff'>PLACEHOLDER QR</text>
+    <text x='50%' y='70%' dominant-baseline='middle' text-anchor='middle' font-size='12' fill='#cfd6df'>${text}</text>
+  </svg>`;
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+}
+
+// PAY BUTTON
+payBtn.addEventListener('click', (ev) => {
+  ev.preventDefault();
+  const fullname = fullnameEl.value.trim();
+  const vpa = upiEl.value.trim();
+  const amount = Number(amountEl.value);
+  if(!fullname){ status.textContent = 'Enter your full name.'; return; }
+  if(!vpa){ status.textContent = 'Enter UPI ID.'; return; }
+
+  status.innerHTML = `<span class="success">Payment simulated ✓</span> Redirecting...`;
+
+  sessionStorage.setItem("demo_order", JSON.stringify({
+    name: fullname, upi: vpa, amount, time: new Date().toISOString()
+  }));
+
+  setTimeout(()=> window.location.href = "thankyou.html", 1200);
+});
+
+// SHOW QR
+showQrBtn.addEventListener('click', ()=>{
+  const vpa = upiEl.value.trim() || 'demo@upi';
+  const amount = Number(amountEl.value) || 0;
+  qrImage.src = placeholderQrDataUrl(`${vpa} • ${formatINR(amount)}`);
+  qrPayTo.textContent = 'Pay to: ' + vpa;
+  qrAmount.textContent = formatINR(amount);
+  qrWrap.style.display = 'flex';
+});
+
+// CLOSE QR
+closeQr.addEventListener('click', ()=> qrWrap.style.display = 'none');
+
+// COPY ID
+copyUpi.addEventListener('click', async ()=>{
+  await navigator.clipboard.writeText(upiEl.value.trim());
+  status.textContent = "Copied!";
+});
+
+// BACK
+backBtn.addEventListener('click', ()=> window.location.href = "products.html");
+</script>
+
+</body>
+</html>
