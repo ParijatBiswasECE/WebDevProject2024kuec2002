@@ -133,7 +133,7 @@
         <input id="phone" type="tel" placeholder="+91xxxxxxxxxx">
 
         <label>Amount (INR)</label>
-        <input id="amount" type="number" min="1" step="1" value="100" required>
+        <input id="amount" type="number" min="1" step="1" value="100" required readonly>
 
         <label>UPI ID (payee)</label>
         <input id="upiId" type="text" placeholder="your-vpa@bank" required>
@@ -309,7 +309,7 @@ copyUpi.addEventListener('click', async ()=>{
 });
 
 // BACK
-backBtn.addEventListener('click', ()=> window.location.href = "products.html");
+backBtn.addEventListener('click', ()=> window.location.href = "product.html");
 </script>
 
 </body>
